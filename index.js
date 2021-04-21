@@ -20236,7 +20236,7 @@
       state: EditorState.create({
         extensions: [basicSetup, javascript()]
       }),
-      parent: document.body
+      parent: document.getElementById('editor')
     });
 
 }());
