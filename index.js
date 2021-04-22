@@ -14004,6 +14004,17 @@
         return true;
     };
     /**
+    Insert a tab character at the cursor or, if something is selected,
+    use [`indentMore`](https://codemirror.net/6/docs/ref/#commands.indentMore) to indent the entire
+    selection.
+    */
+    const insertTab = ({ state, dispatch }) => {
+        if (state.selection.ranges.some(r => !r.empty))
+            return indentMore({ state, dispatch });
+        dispatch(state.update(state.replaceSelection("\t"), { scrollIntoView: true, annotations: Transaction.userEvent.of("input") }));
+        return true;
+    };
+    /**
     Array of key bindings containing the Emacs-style bindings that are
     available on macOS by default.
 
@@ -14144,6 +14155,13 @@
         { key: "Shift-Mod-k", run: deleteLine },
         { key: "Shift-Mod-\\", run: cursorMatchingBracket }
     ].concat(standardKeymap);
+    /**
+    A binding that binds Tab to [`insertTab`](https://codemirror.net/6/docs/ref/#commands.insertTab) and
+    Shift-Tab to [`indentSelection`](https://codemirror.net/6/docs/ref/#commands.indentSelection).
+    Please see the [Tab example](../../examples/tab/) before using
+    this.
+    */
+    const defaultTabBinding = { key: "Tab", run: insertTab, shift: indentSelection };
 
     const defaults = {
         brackets: ["(", "[", "{", "'", '"'],
@@ -20232,11 +20250,121 @@
         }));
     }
 
-    new EditorView({
-      state: EditorState.create({
-        extensions: [basicSetup, javascript()]
-      }),
-      parent: document.getElementById('editor')
-    });
+    // Using https://github.com/one-dark/vscode-one-dark-theme/ as reference for the colors
+    const chalky = "#e5c07b", coral = "#e06c75", cyan = "#56b6c2", invalid = "#ffffff", ivory = "#abb2bf", stone = "#7d8799", // Brightened compared to original to increase contrast
+    malibu = "#61afef", sage = "#98c379", whiskey = "#d19a66", violet = "#c678dd", darkBackground = "#21252b", highlightBackground = "#2c313a", background = "#282c34", selection = "#3E4451", cursor = "#528bff";
+    /// The editor theme styles for One Dark.
+    const oneDarkTheme = EditorView.theme({
+        "&": {
+            color: ivory,
+            backgroundColor: background,
+            "& ::selection": { backgroundColor: selection },
+            caretColor: cursor
+        },
+        "&.cm-focused .cm-cursor": { borderLeftColor: cursor },
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { backgroundColor: selection },
+        ".cm-panels": { backgroundColor: darkBackground, color: ivory },
+        ".cm-panels.cm-panels-top": { borderBottom: "2px solid black" },
+        ".cm-panels.cm-panels-bottom": { borderTop: "2px solid black" },
+        ".cm-searchMatch": {
+            backgroundColor: "#72a1ff59",
+            outline: "1px solid #457dff"
+        },
+        ".cm-searchMatch.cm-searchMatch-selected": {
+            backgroundColor: "#6199ff2f"
+        },
+        ".cm-activeLine": { backgroundColor: highlightBackground },
+        ".cm-selectionMatch": { backgroundColor: "#aafe661a" },
+        ".cm-matchingBracket, .cm-nonmatchingBracket": {
+            backgroundColor: "#bad0f847",
+            outline: "1px solid #515a6b"
+        },
+        ".cm-gutters": {
+            backgroundColor: background,
+            color: stone,
+            border: "none"
+        },
+        ".cm-lineNumbers .cm-gutterElement": { color: "inherit" },
+        ".cm-foldPlaceholder": {
+            backgroundColor: "transparent",
+            border: "none",
+            color: "#ddd"
+        },
+        ".cm-tooltip": {
+            border: "1px solid #181a1f",
+            backgroundColor: darkBackground
+        },
+        ".cm-tooltip-autocomplete": {
+            "& > ul > li[aria-selected]": {
+                backgroundColor: highlightBackground,
+                color: ivory
+            }
+        }
+    }, { dark: true });
+    /// The highlighting style for code in the One Dark theme.
+    const oneDarkHighlightStyle = HighlightStyle.define([
+        { tag: tags.keyword,
+            color: violet },
+        { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName],
+            color: coral },
+        { tag: [tags.function(tags.variableName), tags.labelName],
+            color: malibu },
+        { tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)],
+            color: whiskey },
+        { tag: [tags.definition(tags.name), tags.separator],
+            color: ivory },
+        { tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace],
+            color: chalky },
+        { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link, tags.special(tags.string)],
+            color: cyan },
+        { tag: [tags.meta, tags.comment],
+            color: stone },
+        { tag: tags.strong,
+            fontWeight: "bold" },
+        { tag: tags.emphasis,
+            fontStyle: "italic" },
+        { tag: tags.link,
+            color: stone,
+            textDecoration: "underline" },
+        { tag: tags.heading,
+            fontWeight: "bold",
+            color: coral },
+        { tag: [tags.atom, tags.bool, tags.special(tags.variableName)],
+            color: whiskey },
+        { tag: [tags.processingInstruction, tags.string, tags.inserted],
+            color: sage },
+        { tag: tags.invalid,
+            color: invalid },
+    ]);
+    /// Extension to enable the One Dark theme (both the editor theme and
+    /// the highlight style).
+    const oneDark = [oneDarkTheme, oneDarkHighlightStyle];
+
+    function ready(fn) {
+      if (document.readyState != 'loading'){
+        fn();
+      } else {
+        document.addEventListener('DOMContentLoaded', fn);
+      }
+    }
+
+    document.getElementById('content').classList.add('d-none');
+
+    function install(){
+
+
+
+      window.editor = new EditorView({
+        state: EditorState.create({
+          doc: document.getElementById('content').value,
+          extensions: [basicSetup, javascript(), oneDark, keymap.of([defaultTabBinding]) ]
+        }),
+        parent: document.getElementById('editor')
+      });
+
+
+    }
+
+    ready(install);
 
 }());
